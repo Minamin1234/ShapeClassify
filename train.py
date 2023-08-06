@@ -13,7 +13,7 @@ def get_model(n, types=4):
         layers.Dense(2048, activation="relu"),
         layers.Dense(1024, activation="relu"),
         layers.Dense(128, activation="relu"),
-        layers.Dense(10)
+        layers.Dense(types)
     ])
 
     _model.compile(
