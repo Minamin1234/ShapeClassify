@@ -8,7 +8,7 @@ import tqdm
 import open3d as o3d
 import model.model_2d
 
-def get_random_params() -> [float, float, float]:
+def get_random_params():
     _height = random.uniform(0.5, 12.0)
     _width = random.uniform(0.5, 12.0)
     _radius = random.uniform(0.1, 10.0)
@@ -29,6 +29,8 @@ if __name__ == "__main__":
         "circle",
         "star"
     ]
+    _datas = np.array([])
+    _values = np.array([])
     for i in tqdm.tqdm(range(MODELS)):
         for t in range(4):
             _h, _w, _r = get_random_params()
@@ -55,9 +57,11 @@ if __name__ == "__main__":
                                     _stl_name)
             _stl = o3d.io.read_triangle_mesh(_stl_name)
             _pcd = np.array(_stl.sample_points_poisson_disk(number_of_points=POINTS).points)
-            np.savez_compressed(os.path.join(OUT, f"{MODEL_NAMES[t]}_{i+1}.npz"),
+            _datas = np.append(_datas, np.array(_pcd))
+            _values = np.append(_values, t)
+            """np.savez_compressed(os.path.join(OUT, f"{MODEL_NAMES[t]}_{i+1}.npz"),
                                 pointcloud=_pcd,
-                                shape=t)
+                                shape=t)"""
             _txt_folder = os.path.join(OUT, "txt")
             _txt_name = os.path.join(_txt_folder, f"{MODEL_NAMES[t]}_{i+1}_pcd.txt")
             try:
@@ -68,4 +72,11 @@ if __name__ == "__main__":
                        _pcd)
             pass
         pass
+    _datas = np.reshape(_datas, [MODELS * 4, POINTS, 3])
+    np.savez_compressed(
+        os.path.join(OUT, f"data.npz"),
+        pointcloud=_datas,
+        shape=_values
+    )
     pass
+

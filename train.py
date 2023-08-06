@@ -8,13 +8,14 @@ import tensorflow.keras.layers as layers
 import tensorflow.keras.models as models
 
 def get_model(n, types=4):
-    _input = layers.Input(shape=n)
-    _l = layers.Dense(units=1024, activation="relu")(_input)
-    _l = layers.Dense(units=2048, activation="relu")(_l)
-    _l = layers.Dense(units=2048, activation="relu")(_l)
-    _output = layers.Dense(units=types)
+    _model = tf.keras.Sequential([
+        layers.Flatten(input_shape=(n, 3)),
+        layers.Dense(2048, activation="relu"),
+        layers.Dense(1024, activation="relu"),
+        layers.Dense(128, activation="relu"),
+        layers.Dense(10)
+    ])
 
-    _model = models.Model(inputs=_input, outputs=_output)
     _model.compile(
         optimizer="adam",
         loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
@@ -27,10 +28,14 @@ def train(_model: models.Model,
           _train_labels: np.ndarray,
           _val_datas: np.ndarray,
           _val_labels: np.ndarray):
+    print(_train_datas.shape)
+    print(_train_labels.shape)
     _model.fit(
         _train_datas,
         _train_labels,
-        epochs=10
+        epochs=10,
+        batch_size=32,
+        use_multiprocessing=True
     )
     _loss, _acc = _model.evaluate(_val_datas, _val_labels)
     print(f"loss: {_loss}, accuracy: {_acc}")
@@ -53,23 +58,43 @@ if __name__ == "__main__":
     VAL = args.val_path
     TEST = args.test_path
     POINTS = int(args.points)
-    _train_files = glob.glob(os.path.join(TRAIN, "*.npz"))
-    _val_files = glob.glob(os.path.join(VAL, "*.npz"))
-    _test_files = glob.glob(os.path.join(TEST, "*.npz"))
+    _train_file = glob.glob(os.path.join(TRAIN, "*.npz"))[0]
+    _val_file = glob.glob(os.path.join(VAL, "*.npz"))[0]
+    _test_file = glob.glob(os.path.join(TEST, "*.npz"))[0]
     _train_datas = np.array([])
     _train_values = np.array([])
     _val_datas = np.array([])
     _val_values = np.array([])
     _test_datas = np.array([])
     _test_values = np.array([])
-    for f in tqdm.tqdm(_train_files):
-        _data = np.load(f, allow_pickle=True)
-        _train_datas = np.append(_train_datas, [_data["pointcloud"]])
-        _train_values = np.append(_train_values, _data["shape"])
-        pass
-    print(len(_train_datas))
-    _train_values = np.reshape(_train_values, [2400, 4096, 3])
-    print(_train_datas.shape)
-    print(_train_values)
-    #_model = get_model(POINTS, 4)
+
+    _train_data = np.load(_train_file, allow_pickle=True)
+    _train_datas = _train_data["pointcloud"]
+    _train_values = _train_data["shape"]
+    
+    _val_data = np.load(_test_file, allow_pickle=True)
+    _val_datas = _val_data["pointcloud"]
+    _val_values = _val_data["shape"]
+
+    _test_data = np.load(_test_file, allow_pickle=True)
+    _test_datas = _test_data["pointcloud"]
+    _test_values = _test_data["shape"]
+    
+    _model = get_model(POINTS, 4)
+    _model = train(_model, _train_datas, _train_values, _val_datas, _val_values)
+    _idxs = np.arange(4)
+    rng = np.random.default_rng()
+    rng.shuffle(_idxs)
+    MODEL_NAMES = np.array([
+        "rect",
+        "triangle",
+        "circle",
+        "star"
+    ])
+    _test_datas = _test_datas[_idxs]
+    _test_values = _test_values[_idxs]
+    _pred = predict(_model, _test_datas)
+    for i in range(len(_pred)):
+        print(MODEL_NAMES[np.argmax(_pred[i])])
+    print(MODEL_NAMES[_test_values.astype(int)])
     pass

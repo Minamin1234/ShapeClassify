@@ -14,7 +14,6 @@ RUN apt install -y \
     libgl1 \
     libgomp1
 RUN pip3 install open3d
-RUN pip3 install bpy
 RUN pip3 install natsort
 
 RUN mkdir /home/ShapeClassify
